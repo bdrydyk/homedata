@@ -12,7 +12,7 @@ class WebPowerSwitch(object):
 	"""docstring for WebPowerSwitch"""
 	def __init__(self):
 		super(WebPowerSwitch, self).__init__()
-		self.base_url = "http://10.0.1.67/"
+		self.base_url = "http://admin:seebeck10@10.0.1.67/"
 		requests.get(self.base_url + 'login.tgi', params={'Username':'admin', 'Password':'seebeck10'})
 		
 r = requests.get('https://api.github.com/user', auth=('user', 'pass'))
