@@ -2,11 +2,20 @@
 
 
 import requests
-import time
 import csv
 import os
 import logging
 from nunchuck import nunchuck
+import sched, time
+from threading import Timer
+
+try:
+    from queue import Queue
+except ImportError:
+    from Queue import Queue
+from collections import namedtuple
+
+TICK_TIME = 1
 
 options ={}
 options['access_token'] = '121a6946461321fd48f813e8cda6ce07'
@@ -19,6 +28,24 @@ logger.handlers = []
 ch = logging.StreamHandler()
 logger.addHandler(ch)
 logger.setLevel(logging.INFO)
+
+
+def debounce(wait):
+    """ Decorator that will postpone a functions
+        execution until after wait seconds
+        have elapsed since the last time it was invoked. """
+    def decorator(fn):
+        def debounced(*args, **kwargs):
+            def call_it():
+                fn(*args, **kwargs)
+            try:
+                debounced.t.cancel()
+            except(AttributeError):
+                pass
+            debounced.t = Timer(wait, call_it)
+            debounced.t.start()
+        return debounced
+    return decorator
 
 class WebPowerSwitch(object):
 	"""docstring for WebPowerSwitch"""
@@ -109,3 +136,64 @@ class Nunchuck(nunchuck):
 		self.accelerometer_y	= self.accelerometer_y()           # Returns just the Y position of the accelerometer
 		self.accelerometer_z	= self.accelerometer_z()           # Returns just the Z position of the accelerometer
 		#self.scale(value,min,max,out_min,out_max)
+
+class HomeData(object):
+	"""docstring for MainLoop"""
+	def __init__(self, tick_delay):
+		super(MainLoop, self).__init__()
+		self.tick_delay = tick_delay
+		self.power_switch = WebPowerSwitch()
+		#self.nunchuck = Nunchuck()
+		#self.wio_link = WioLink()
+
+		self.scheduler = sched.scheduler(time.time, time.sleep)
+		self.scheduler.enter(1,1,self.check_buttons)
+
+
+	def check_buttons(self):
+		if self.nunchuck.button_c:
+			self.power_switch.outlet("a","ON")
+		elif self.nunchuck.button_z:
+			self.power_switch.outlet("a","OFF")
+
+
+
+
+
+# if __name__ == '__main__':
+# 	s = sched.scheduler(time.time, time.sleep)
+# 	def print_time(): print "From print_time", time.time()
+# Invocation = namedtuple('Invocation', ( 'fn', 'args', 'kwargs' ))
+# class RunLoop:
+# 	def __init__(self):
+# 		self.queue = Queue()
+# 		self.running = False
+# 	def add(self, fn, args=(), kwargs={}):
+# 		self.queue.put(Invocation(fn, args, kwargs))
+# 	def every(self, fn, interval, args=(), kwargs={}):
+# 		import threading
+# 		invocation = Invocation(fn, args, kwargs)
+# 		def do_repeat():
+# 			event = threading.Event()
+# 			while True:
+# 				event.wait(interval)
+# 				self.queue.put(invocation)
+# 		thread = threading.Thread(target=do_repeat)
+# 		thread.daemon = True
+# 		thread.start()
+# 	def run(self):
+# 		self.running = True
+# 		while self.running:
+# 			inv = self.queue.get()
+# 			inv.fn(*inv.args, **inv.kwargs)
+# 	def stop(self):
+# 		self.running = False
+# 		def nop(): # no operation (like assembler instruction) does nothing
+# 			pass
+# 		self.add(nop) # to make queue.get() call in run method quit and let while-loop stop
+# 	def onLoop(self, fn):
+# 		from functools import wraps
+# 		@wraps(fn)
+# 		def wrapper(*args, **kwargs):
+# 			self.add(fn, args, kwargs)
+# 		return wrapper
