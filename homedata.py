@@ -14,6 +14,8 @@ try:
 except ImportError:
     from Queue import Queue
 from collections import namedtuple
+import threading
+
 
 TICK_TIME = 1
 
@@ -53,7 +55,7 @@ class WebPowerSwitch(object):
 		super(WebPowerSwitch, self).__init__()
 		self.base_url = "http://admin:seebeck10@10.0.1.67/"
 		requests.get(self.base_url + 'login.tgi', params={'Username':'admin', 'Password':'seebeck10'})
-		
+
 	def outlet(self,outlet,state):
 		requests.get(self.base_url + "outlet", params={outlet:state})
 # r = requests.get('https://api.github.com/user', auth=('user', 'pass'))
@@ -85,7 +87,7 @@ class WioLink(object):
 		return house_data
 
 	def write_csv_row(self,data_row):
-		
+
 		if os.path.isfile(csv_file):
 			outfile = open(csv_file,"a")
 			writer = csv.writer(outfile)
@@ -108,92 +110,34 @@ class Nunchuck(nunchuck):
 	def __init__(self):
 		super(Nunchuck, self).__init__()
 		#self.arg = arg
-		self.raw_data 			= self.raw()                       # Returns all the data in raw
-		self.joystick_state 	= self.joystick()                  # Returns just the X and Y positions of the joystick
-		self.accelerometer 		= self.accelerometer()             # Returns X, Y and Z positions of the accelerometer
-		self.button_c			= self.button_c()                  # Returns True if C button is pressed, False if not
-		self.button_z			= self.button_z()                  # Returns True if Z button is pressed, False if not
-
-		self.joystick_x			= self.joystick_x()                # Returns just the X position of the joystick
-		self.joystick_y			= self.joystick_y()                # Returns just the Y position of the joystick
-		self.accelerometer_x	= self.accelerometer_x()           # Returns just the X position of the accelerometer
-		self.accelerometer_y	= self.accelerometer_y()           # Returns just the Y position of the accelerometer
-		self.accelerometer_z	= self.accelerometer_z()           # Returns just the Z position of the accelerometer
 		#self.scale(value,min,max,out_min,out_max)
 
-
-		
-	def get_state(self):
-		self.raw_data 			= self.raw()                       # Returns all the data in raw
-		self.joystick_state 	= self.joystick()                  # Returns just the X and Y positions of the joystick
-		self.accelerometer 		= self.accelerometer()             # Returns X, Y and Z positions of the accelerometer
-		self.button_c			= self.button_c()                  # Returns True if C button is pressed, False if not
-		self.button_z			= self.button_z()                  # Returns True if Z button is pressed, False if not
-
-		self.joystick_x			= self.joystick_x()                # Returns just the X position of the joystick
-		self.joystick_y			= self.joystick_y()                # Returns just the Y position of the joystick
-		self.accelerometer_x	= self.accelerometer_x()           # Returns just the X position of the accelerometer
-		self.accelerometer_y	= self.accelerometer_y()           # Returns just the Y position of the accelerometer
-		self.accelerometer_z	= self.accelerometer_z()           # Returns just the Z position of the accelerometer
 		#self.scale(value,min,max,out_min,out_max)
 
 class HomeData(object):
 	"""docstring for MainLoop"""
 	def __init__(self, tick_delay):
-		super(MainLoop, self).__init__()
+		super(HomeData, self).__init__()
 		self.tick_delay = tick_delay
 		self.power_switch = WebPowerSwitch()
-		#self.nunchuck = Nunchuck()
+		self.nunchuck = Nunchuck()
 		#self.wio_link = WioLink()
 
-		self.scheduler = sched.scheduler(time.time, time.sleep)
-		self.scheduler.enter(1,1,self.check_buttons)
+#		self.scheduler.enter(self.tick_delay,1,self.check_buttons,())
+		print("beginning loop")
 
 
 	def check_buttons(self):
-		if self.nunchuck.button_c:
+		print("checking button state")
+		logger.error("Checking Button State")
+		if self.nunchuck.button_c():
 			self.power_switch.outlet("a","ON")
-		elif self.nunchuck.button_z:
+		elif self.nunchuck.button_z():
 			self.power_switch.outlet("a","OFF")
+		threading.Timer(TICK_TIME,self.check_buttons).start()
+#		self.scheduler.enter(self.tick_delay,1,self.check_buttons,())
 
+if __name__ == '__main__':
+    h = HomeData(1)
+    threading.Timer(TICK_TIME,h.check_buttons).start()
 
-
-
-
-# if __name__ == '__main__':
-# 	s = sched.scheduler(time.time, time.sleep)
-# 	def print_time(): print "From print_time", time.time()
-# Invocation = namedtuple('Invocation', ( 'fn', 'args', 'kwargs' ))
-# class RunLoop:
-# 	def __init__(self):
-# 		self.queue = Queue()
-# 		self.running = False
-# 	def add(self, fn, args=(), kwargs={}):
-# 		self.queue.put(Invocation(fn, args, kwargs))
-# 	def every(self, fn, interval, args=(), kwargs={}):
-# 		import threading
-# 		invocation = Invocation(fn, args, kwargs)
-# 		def do_repeat():
-# 			event = threading.Event()
-# 			while True:
-# 				event.wait(interval)
-# 				self.queue.put(invocation)
-# 		thread = threading.Thread(target=do_repeat)
-# 		thread.daemon = True
-# 		thread.start()
-# 	def run(self):
-# 		self.running = True
-# 		while self.running:
-# 			inv = self.queue.get()
-# 			inv.fn(*inv.args, **inv.kwargs)
-# 	def stop(self):
-# 		self.running = False
-# 		def nop(): # no operation (like assembler instruction) does nothing
-# 			pass
-# 		self.add(nop) # to make queue.get() call in run method quit and let while-loop stop
-# 	def onLoop(self, fn):
-# 		from functools import wraps
-# 		@wraps(fn)
-# 		def wrapper(*args, **kwargs):
-# 			self.add(fn, args, kwargs)
-# 		return wrapper
