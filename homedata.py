@@ -40,7 +40,7 @@ class WioLink(object):
 	"""docstring for WioLink"""
 	def __init__(self, arg):
 		super(WioLink, self).__init__()
-		self.arg = arg
+		#self.arg = arg
 		self.data_cols = ['time','quality','temp','pressure','humidity','celsius_degree','fahrenheit_degree']
 		self.csv_file = options['csv_file']
 
@@ -78,9 +78,9 @@ class WioLink(object):
 
 class Nunchuck(nunchuck):
 	"""docstring for Nunchuck"""
-	def __init__(self, arg):
+	def __init__(self):
 		super(Nunchuck, self).__init__()
-		self.arg = arg
+		#self.arg = arg
 		self.raw_data 			= self.raw()                       # Returns all the data in raw
 		self.joystick_state 	= self.joystick()                  # Returns just the X and Y positions of the joystick
 		self.accelerometer 		= self.accelerometer()             # Returns X, Y and Z positions of the accelerometer
